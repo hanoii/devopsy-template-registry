@@ -3,9 +3,12 @@
 # The environments' release and rollback run step (config.yaml), run on the
 # server by `devopsy @<target> --release` and `--rollback`; or locally.
 #
-# It generates missing secrets first (secrets). Every run writes
-# mnt/auth/htpasswd when it does not match REGISTRY_USER and
-# REGISTRY_PASSWORD, so changing the password in .env and deploying applies it.
+# It generates missing secrets first (secrets). Every run checks
+# mnt/auth/htpasswd against the two users, REGISTRY_USER (pushes and pulls)
+# and REGISTRY_PULL_USER (pulls), and their passwords, and rewrites it when
+# they differ, so changing a password in .env and deploying applies it. Then
+# it writes the push user's line into .env as REGISTRY_PUSH_USERS, for the
+# Traefik basic auth that keeps the pull user read-only (compose.yaml).
 set -eu
 
 env_file="$DEVOPSY_PROJECT_DIR/.env"
@@ -16,23 +19,61 @@ devopsy secrets
 
 # The values as written in .env: they were just generated, or set by hand
 # (keep them unquoted).
-user="$(sed -n 's/^REGISTRY_USER=//p' "$env_file" | tail -n 1)"
+env_get() { sed -n "s/^$1=//p" "$env_file" | tail -n 1; }
+user="$(env_get REGISTRY_USER)"
 user="${user:-devopsy}"
-password="$(sed -n 's/^REGISTRY_PASSWORD=//p' "$env_file" | tail -n 1)"
+password="$(env_get REGISTRY_PASSWORD)"
+pull_user="$(env_get REGISTRY_PULL_USER)"
+pull_user="${pull_user:-pull}"
+pull_password="$(env_get REGISTRY_PULL_PASSWORD)"
+if [ "$pull_user" = "$user" ]; then
+  echo "deploy: REGISTRY_PULL_USER must differ from REGISTRY_USER ($user)" >&2
+  exit 1
+fi
 
 devopsy pull --quiet registry init htpasswd
 
-# The password goes through stdin, never the command line. A running registry
-# restarts to read a new file.
+# Passwords go through stdin, never the command line.
+# verify USER PASSWORD: true when mnt/auth/htpasswd has that user and password.
+verify() {
+  printf '%s\n' "$2" | devopsy run --rm -T -v "$auth_dir:/auth:ro" htpasswd -v -i /auth/htpasswd "$1" >/dev/null 2>&1
+}
+# hash USER PASSWORD: the user's htpasswd line (bcrypt, which the registry
+# requires; htpasswd -n adds an empty line).
+hash() {
+  printf '%s\n' "$2" | devopsy run --rm -T htpasswd -n -i -B "$1" 2>/dev/null | sed '/^$/d'
+}
+
+# A running registry restarts to read a new file.
 running="$(devopsy ps -q registry 2>/dev/null)"
 changed=
 mkdir -p "$auth_dir"
-if ! printf '%s\n' "$password" | devopsy run --rm -T -v "$auth_dir:/auth:ro" htpasswd -v -i /auth/htpasswd "$user" >/dev/null 2>&1; then
-  printf '%s\n' "$password" | devopsy run --rm -T htpasswd -n -i -B "$user" 2>/dev/null > "$auth_dir/htpasswd.new"
+if [ "$(wc -l < "$auth_dir/htpasswd" 2>/dev/null || echo 0)" -ne 2 ] \
+  || ! verify "$user" "$password" || ! verify "$pull_user" "$pull_password"; then
+  { hash "$user" "$password"; hash "$pull_user" "$pull_password"; } > "$auth_dir/htpasswd.new"
   mv "$auth_dir/htpasswd.new" "$auth_dir/htpasswd"
-  echo "deploy: wrote mnt/auth/htpasswd for $user" >&2
+  echo "deploy: wrote mnt/auth/htpasswd for $user and $pull_user" >&2
   changed=1
 fi
+
+# The push user's line, for Traefik's basic auth, in .env: single-quoted,
+# since compose expands $ in unquoted values, and written through the file
+# (on servers .env is a link to shared/.env). Exported too: devopsy passes
+# its environment to the nested `devopsy up`, where it wins over .env.
+push_users="$(grep "^$user:" "$auth_dir/htpasswd")"
+if [ "$(env_get REGISTRY_PUSH_USERS)" != "'$push_users'" ]; then
+  tmp="$(mktemp)"
+  awk -v line="REGISTRY_PUSH_USERS='$push_users'" '
+    index($0, "REGISTRY_PUSH_USERS=") == 1 { if (!done) print line; done = 1; next }
+    { print }
+    END { if (!done) print line }
+  ' "$env_file" > "$tmp"
+  cat "$tmp" > "$env_file"
+  rm -f "$tmp"
+  echo "deploy: wrote REGISTRY_PUSH_USERS in .env" >&2
+fi
+REGISTRY_PUSH_USERS="$push_users"
+export REGISTRY_PUSH_USERS
 
 devopsy up -d --wait --remove-orphans
 if [ -n "$changed" ] && [ -n "$running" ]; then

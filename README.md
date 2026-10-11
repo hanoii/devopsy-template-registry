@@ -2,9 +2,10 @@
 
 A private Docker registry ([CNCF distribution](https://distribution.github.io/distribution/))
 on a [devopsy](https://github.com/hanoii/devopsy-cli) server, behind
-[devopsy-template-traefik](https://github.com/hanoii/devopsy-template-traefik), with a user and
-password. Use it for devopsy's image mode: build and push images from CI or a
-build server, and have each environment pull its commit's image.
+[devopsy-template-traefik](https://github.com/hanoii/devopsy-template-traefik), with two users: one
+that pushes, for CI or a build server, and a read-only one, for the servers
+that pull the images. Use it for devopsy's image mode: build and push images
+from CI or a build server, and have each environment pull its commit's image.
 
 ## Using this template
 
@@ -33,11 +34,13 @@ DEVOPSY_WILDCARD_DOMAIN`.
 
 ```sh
 devopsy @prod --release          # runs deploy: https://registry-prod.<server's wildcard domain>
-devopsy @prod credentials      # URL, user and password for docker login
+devopsy @prod credentials      # URL, users and passwords for docker login
+devopsy @prod credentials pull # the read-only user only
+devopsy @prod rotate pull      # a new password for it
 devopsy @prod logs -f registry
 ```
 
-Then, wherever you push or pull:
+Then, where you push (CI, a build server):
 
 ```sh
 docker login registry-prod.example.com -u devopsy
@@ -45,14 +48,37 @@ docker tag myapp registry-prod.example.com/myapp:abc123
 docker push registry-prod.example.com/myapp:abc123
 ```
 
+And on the servers that run the images, the `pull` user: it can pull and
+list, never push or delete, so a server holds no credential that could
+replace an image.
+
+```sh
+docker login registry-prod.example.com -u pull
+```
+
 ## How it works
 
-- **Secrets.** The first release generates `REGISTRY_PASSWORD` and
-  `REGISTRY_HTTP_SECRET` into the server's `shared/.env` (`secrets`, its
-  prepare step, before it goes live). Every `deploy`
-  checks `mnt/auth/htpasswd` against `REGISTRY_USER` (default `devopsy`) and
-  `REGISTRY_PASSWORD`, and rewrites it (bcrypt, through `httpd`'s `htpasswd`)
-  when they differ: to change the password, edit `shared/.env` and deploy.
+- **Secrets.** The first release generates `REGISTRY_PASSWORD`,
+  `REGISTRY_PULL_PASSWORD` and `REGISTRY_HTTP_SECRET` into the server's
+  `shared/.env` (`secrets`, its prepare step, before it goes live). Every
+  `deploy` checks `mnt/auth/htpasswd` against the two users, `REGISTRY_USER`
+  (default `devopsy`) and `REGISTRY_PULL_USER` (default `pull`), and their
+  passwords, and rewrites it (bcrypt, through `httpd`'s `htpasswd`) when
+  they differ.
+- **Rotating.** `devopsy @prod rotate pull` (or `push`) writes a new random
+  password into `shared/.env`, deploys, and prints the new login. The old
+  password stops working at once: update it where that user logs in. To
+  choose a password instead, `devopsy @prod --vars set
+  REGISTRY_PULL_PASSWORD`, then `devopsy @prod deploy`.
+- **The read-only user.** The registry's htpasswd has no permissions: every
+  user in it can push. Traefik makes `pull` read-only: pulls are `GET` and
+  `HEAD` requests (manifests, blobs, the catalog), and a second router sends
+  every other method (uploads, tags, deletes) through a basic auth of the
+  push user alone, before the registry checks the same credentials again.
+  `deploy` writes that user's htpasswd line into `.env` as
+  `REGISTRY_PUSH_USERS` for the router's label, in single quotes (compose
+  expands `$` in unquoted values). The `pull` user can still list every
+  repository and tag.
 - **Storage.** Images live in `shared/mnt/registry`: back it up, or accept
   rebuilding images. The registry runs as UID 10001 with a read-only root
   filesystem; a one-shot `init` service gives it the storage directory,

@@ -1,10 +1,14 @@
 # A private Docker registry (CNCF distribution) behind devopsy-template-traefik, with
-# htpasswd authentication. Images live in ./mnt/registry (on servers
-# shared/mnt/registry).
+# htpasswd authentication: a user that pushes and pulls (REGISTRY_USER,
+# default devopsy) and one that only pulls (REGISTRY_PULL_USER, default
+# pull), for the servers that run the images. Images live in ./mnt/registry
+# (on servers shared/mnt/registry).
 #
-# REGISTRY_PASSWORD and REGISTRY_HTTP_SECRET are secrets in .devopsy/.env (on
-# servers shared/.env). `devopsy secrets` generates them (a release runs it before going live), and
-# writes ./mnt/auth/htpasswd from REGISTRY_USER and REGISTRY_PASSWORD.
+# REGISTRY_PASSWORD, REGISTRY_PULL_PASSWORD and REGISTRY_HTTP_SECRET are
+# secrets in .devopsy/.env (on servers shared/.env). `devopsy secrets`
+# generates them (a release runs it before going live), and `deploy` writes
+# ./mnt/auth/htpasswd for both users, and REGISTRY_PUSH_USERS into .env for
+# Traefik (below).
 services:
   registry:
     image: registry:3.1.2
@@ -42,14 +46,32 @@ services:
       # proxy running the release fails: the project expects one.
       - devopsy.import.DEVOPSY_WILDCARD_DOMAIN=proxy/WILDCARD_DOMAIN
       - traefik.enable=true
+      # The registry's htpasswd has no scopes: every user in it pushes. The
+      # pull user is read-only because Traefik splits requests by method:
+      # pulls are GET and HEAD (manifests, blobs, the catalog); everything
+      # else (POST, PATCH, PUT, DELETE: uploads, tags, deletes) goes through
+      # a basic auth of the push user alone, before the registry checks the
+      # same header again. The pull router's rule is longer, so Traefik
+      # gives it priority.
+      #
       # SITE_HOST_RULE: the target's DEVOPSY_DOMAINS plus
       # <compose project>.<DEVOPSY_WILDCARD_DOMAIN>, computed by
       # capabilities/env/compute. The fallback, for plain docker compose, is
       # a HostRegexp: Traefik requests no certificate for it, so a target
       # without hosts logs no ACME errors.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.rule=(${SITE_HOST_RULE:-HostRegexp(`^app\.localhost$`)}) && (Method(`GET`) || Method(`HEAD`))
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.service=${COMPOSE_PROJECT_NAME:-app}
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.rule=${SITE_HOST_RULE:-HostRegexp(`^app\.localhost$`)}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.service=${COMPOSE_PROJECT_NAME:-app}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.middlewares=${COMPOSE_PROJECT_NAME:-app}-push
+      # REGISTRY_PUSH_USERS: the push user's line of mnt/auth/htpasswd
+      # (user:bcrypt), written to .env by deploy before `up`, in single
+      # quotes: compose expands $ in unquoted values. Not required here: a
+      # release checks required variables before deploy writes it.
+      - traefik.http.middlewares.${COMPOSE_PROJECT_NAME:-app}-push.basicauth.users=${REGISTRY_PUSH_USERS:-}
       # letsencrypt1 (HTTP-01, the default), acmedns or cloudflare (DNS-01),
       # per target, in config.yaml.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.tls.certresolver=${CERTRESOLVER:-letsencrypt1}
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.tls.certresolver=${CERTRESOLVER:-letsencrypt1}
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
     networks: [default, traefik]

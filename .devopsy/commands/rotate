@@ -1,0 +1,36 @@
+#!/bin/sh
+## Description: Replace a user's password with a new one and apply it (push or pull)
+# Usage: devopsy rotate push|pull
+#
+# Writes a new random REGISTRY_PASSWORD (push) or REGISTRY_PULL_PASSWORD
+# (pull) into .env, runs deploy, which rewrites mnt/auth/htpasswd and
+# restarts the registry, and prints the new login. The old password stops
+# working at once: update it wherever that user logs in (CI and build hosts
+# for push; the servers that pull, whose next release fails otherwise).
+set -eu
+
+case ${1:-} in
+  push) key=REGISTRY_PASSWORD ;;
+  pull) key=REGISTRY_PULL_PASSWORD ;;
+  *)
+    echo "usage: devopsy rotate push|pull" >&2
+    exit 2
+    ;;
+esac
+
+env_file="$DEVOPSY_PROJECT_DIR/.env"
+# The same shape secrets generates. Written through the file, never moved
+# over it: on servers .env is a link to shared/.env.
+value="$(head -c 48 /dev/urandom | base64 | tr -d '\n' | tr '+/' '-_')"
+tmp="$(mktemp)"
+awk -v key="$key" -v line="$key=$value" '
+  index($0, key "=") == 1 { if (!done) print line; done = 1; next }
+  { print }
+  END { if (!done) print line }
+' "$env_file" > "$tmp"
+cat "$tmp" > "$env_file"
+rm -f "$tmp"
+echo "rotate: new $key in .env" >&2
+
+devopsy deploy
+devopsy credentials "$1"
