@@ -8,6 +8,7 @@
 # devopsy.import label); override it, or set it empty for none, with:
 #   devopsy @prod --vars set --show DEVOPSY_WILDCARD_DOMAIN
 project: registry
+secrets: [REGISTRY_PASSWORD, REGISTRY_PULL_PASSWORD, REGISTRY_HTTP_SECRET, REGISTRY_PUSH_USERS]
 defaults:
   mode: image
   release: {prepare: secrets, run: deploy}
