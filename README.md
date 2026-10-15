@@ -114,7 +114,7 @@ With a local devopsy-template-traefik, the registry is at
 `https://registry.localhost` (the config's project name):
 
 ```sh
-devopsy deploy
+devopsy --release
 devopsy credentials
 ```
 
