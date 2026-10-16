@@ -83,10 +83,9 @@ docker login registry-prod.example.com -u pull
   rebuilding images. The registry runs as UID 10001 with a read-only root
   filesystem; a one-shot `init` service gives it the storage directory,
   which the deploy user cannot do.
-- **Destroying.** `devopsy @prod --destroy` runs `destroy`, the
-  environments' destroy step: it takes the containers down and empties
-  `mnt/` through `init`, as root, for the same reason. Then devopsy removes
-  the environment's directory.
+- **Destroying.** `devopsy @prod --destroy` is devopsy's alone: it takes
+  the containers and volumes down, empties `mnt/` as root, then removes
+  the environment's directory. No destroy step.
 - **Uploads.** Traefik limits how long a request may take, body included, to
   60 seconds by default, which can cut a large layer pushed over a slow link.
   Raise it with `DEVOPSY_READ_TIMEOUT` in Traefik's `.devopsy/.env` (for
