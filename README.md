@@ -100,7 +100,8 @@ the tags, delete the ones you no longer need, then collect:
 ```sh
 devopsy @prod images          # every tag: digest, compressed size
 devopsy @prod images myapp    # one repository's
-devopsy @prod delete myapp:abc123 myapp:def456
+devopsy @prod delete myapp:abc123 myapp:def456   # type 'delete' to go on
+devopsy @prod delete myapp    # every tag of it: type 'delete all'
 devopsy @prod gc --dry-run    # only lists what would go
 devopsy @prod gc              # stops the registry, collects, starts it again
 devopsy @prod --status        # the storage it uses now
@@ -110,9 +111,11 @@ They run [crane](https://github.com/google/go-containerregistry/tree/main/cmd/cr
 in the `tools` profile's `crane` service, as the push user, on the
 project's network (`registry:5000`), never through Traefik; `devopsy
 @prod crane ...` runs any other crane command there, like `devopsy @prod
-crane ls registry:5000/myapp`. `delete` removes only the tags named: an
+crane ls registry:5000/myapp`. `delete` lists the tags first and asks
+to type `delete`, or `delete all` for a whole repository (`--yes` skips
+it, and is needed without a terminal). It removes only the tags: an
 image another tag points to stays (`images` shows which tags share a
-digest). Sizes count each tag's layers, shared or not, so they add up to
+digest), and the repository stays listed, with no tags. Sizes count each tag's layers, shared or not, so they add up to
 more than `--status` shows. A server that ran a deleted tag keeps its
 copy for rollbacks, but a new release of that tag fails.
 
