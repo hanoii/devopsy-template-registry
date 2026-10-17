@@ -1,0 +1,46 @@
+#!/bin/sh
+## Description: Delete tags from the registry, then gc frees their space
+# Usage: devopsy delete <repository>:<tag>... [--yes]
+#
+# Deletes each tag, as the push user. Only the tag goes: an image other
+# tags still point to stays (`devopsy images` shows which share a
+# digest). Nothing is freed until `devopsy gc`. Servers that ran a deleted
+# tag keep their copy for rollbacks; a new release of it fails. Asks at a
+# terminal; --yes skips it.
+set -eu
+yes=
+refs=
+for a in "$@"; do
+  case $a in
+    --yes) yes=1 ;;
+    *:*) refs="$refs $a" ;;
+    *)
+      echo "delete: $a: not <repository>:<tag>" >&2
+      exit 2
+      ;;
+  esac
+done
+if [ -z "$refs" ]; then
+  echo "usage: devopsy delete <repository>:<tag>... [--yes]" >&2
+  exit 2
+fi
+if [ -z "$yes" ]; then
+  if [ ! -t 0 ]; then
+    echo "delete: not a terminal: add --yes to delete$refs" >&2
+    exit 2
+  fi
+  printf "Delete%s? [y/N] " "$refs" >&2
+  read -r answer
+  case $answer in y | Y | yes) ;; *) exit 1 ;; esac
+fi
+# set -- word-splits $refs on purpose: refs have no spaces.
+# shellcheck disable=SC2086
+set -- $refs
+devopsy run --rm --no-deps -T crane sh -c '
+set -eu
+for ref in "$@"; do
+  crane --insecure delete "registry:5000/$ref"
+  echo "delete: $ref" >&2
+done
+' delete "$@"
+echo "delete: devopsy gc frees the space" >&2

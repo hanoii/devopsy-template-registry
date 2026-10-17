@@ -94,6 +94,23 @@ services:
     entrypoint: [htpasswd]
     network_mode: none
 
+  # `devopsy crane`, `images` and `delete` reach the registry with it, as
+  # the push user, inside the project's network: registry:5000, plain
+  # HTTP, never through Traefik. The entrypoint logs in, then runs the
+  # command it is given. The debug image has a shell. Never started by
+  # `up`. The login only writes crane's config, so its output goes.
+  crane:
+    image: gcr.io/go-containerregistry/crane/debug:v0.22.1
+    profiles: [tools]
+    environment:
+      REGISTRY_USER: ${REGISTRY_USER:-devopsy}
+      REGISTRY_PASSWORD: ${REGISTRY_PASSWORD:-}
+    entrypoint:
+      - sh
+      - -c
+      - printf '%s' "$$REGISTRY_PASSWORD" | crane auth login registry:5000 -u "$$REGISTRY_USER" --password-stdin >/dev/null 2>&1 && exec "$$@"
+      - crane
+
 networks:
   traefik:
     name: traefik

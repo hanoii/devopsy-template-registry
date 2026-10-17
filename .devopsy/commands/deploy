@@ -31,8 +31,8 @@ if [ "$pull_user" = "$user" ]; then
 fi
 
 # devopsy pulled the others before the release went live (image mode);
-# htpasswd is in the tools profile, which it leaves alone.
-devopsy pull --quiet htpasswd
+# htpasswd and crane are in the tools profile, which it leaves alone.
+devopsy pull --quiet htpasswd crane
 
 # Passwords go through stdin, never the command line.
 # verify USER PASSWORD: true when mnt/auth/htpasswd has that user and password.

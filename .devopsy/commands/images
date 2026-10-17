@@ -1,0 +1,44 @@
+#!/bin/sh
+## Description: List the registry's tags with their digests and sizes (all, or some repositories)
+# Usage: devopsy images [repository...]
+#
+# One line per tag: the tag, its digest (tags with the same digest are one
+# image) and its compressed size, every platform of a multi-platform tag
+# added up. Layers that tags share count in each, so the sizes add up to
+# more than the registry stores: `devopsy --status` has the real total.
+# A repository whose tags are all gone stays listed, with none: the
+# registry keeps it, even after `devopsy gc`.
+set -eu
+exec devopsy run --rm --no-deps -T crane sh -c '
+set -eu
+r=registry:5000
+c() { crane --insecure "$@"; }
+# The compressed bytes of a manifest: its config and layers.
+bytes() { grep -o "\"size\": *[0-9]*" | grep -o "[0-9]*$" | awk "{ s += \$1 } END { print s + 0 }"; }
+human() { awk -v b="$1" "BEGIN { split(\"B KB MB GB TB\", u); i = 1; while (b >= 1000 && i < 5) { b /= 1000; i++ } printf(i == 1 ? \"%d %s\" : \"%.1f %s\", b, u[i]) }"; }
+repos="$*"
+[ -n "$repos" ] || repos=$(c catalog "$r")
+[ -n "$repos" ] || { echo "no repositories" >&2; exit 0; }
+for repo in $repos; do
+  tags=$(c ls "$r/$repo")
+  if [ -z "$tags" ]; then
+    printf "%s\tno tags\n" "$repo"
+    continue
+  fi
+  for tag in $tags; do
+    manifest=$(c manifest "$r/$repo:$tag")
+    case $manifest in
+      *\"manifests\"*)
+        # An index: every platform, attestations included.
+        size=0
+        for d in $(printf "%s" "$manifest" | grep -o "sha256:[0-9a-f]\{64\}"); do
+          size=$((size + $(c manifest "$r/$repo@$d" | bytes)))
+        done
+        ;;
+      *) size=$(printf "%s" "$manifest" | bytes) ;;
+    esac
+    digest=$(c digest "$r/$repo:$tag")
+    printf "%s:%s\t%s\t%s\n" "$repo" "$tag" "$(echo "$digest" | cut -c 1-19)" "$(human "$size")"
+  done
+done | awk -F "\t" "{ l[NR] = \$0; if (length(\$1) > w) w = length(\$1) } END { for (i = 1; i <= NR; i++) { n = split(l[i], f, \"\t\"); printf(\"%-\" w \"s  %s\", f[1], f[2]); if (n > 2) printf(\"  %8s\", f[3]); print \"\" } }"
+' images "$@"

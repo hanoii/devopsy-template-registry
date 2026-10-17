@@ -1,0 +1,10 @@
+#!/bin/sh
+## Description: Run crane against the registry, as the push user (registry:5000/<repository>)
+# Usage: devopsy crane catalog registry:5000
+#        devopsy crane ls registry:5000/myapp
+#
+# crane (go-containerregistry) in the tools profile's crane service, on
+# the project's network: the registry is registry:5000 there, over plain
+# HTTP (--insecure). Needs the registry running.
+set -eu
+exec devopsy run --rm --no-deps -T crane crane --insecure "$@"
