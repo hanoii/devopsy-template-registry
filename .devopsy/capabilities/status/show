@@ -22,8 +22,13 @@ elif grep -q "^$user:" "$auth" && grep -q "^$pull_user:" "$auth"; then
 else
   echo "htpasswd     other users than .env's (devopsy deploy rewrites it)"
 fi
-# What gc can shrink. The registry's UID owns it; du skips what it
-# cannot read.
-if [ -d "$storage" ]; then
-  echo "storage      $(du -sh "$storage" 2>/dev/null | cut -f 1) (devopsy gc frees deleted tags)"
+# What gc can shrink. The registry's UID owns it, so du runs in the
+# running registry, which reads every file; stopped, du here skips what
+# the deploy user cannot read.
+if devopsy ps --services --status running 2>/dev/null | grep -qx registry; then
+  size=$(devopsy exec -T registry du -sh /var/lib/registry </dev/null 2>/dev/null | cut -f 1)
+  echo "storage      ${size:-unknown} (devopsy gc frees deleted tags)"
+elif [ -d "$storage" ]; then
+  size=$(du -sh "$storage" 2>/dev/null | cut -f 1)
+  echo "storage      ${size:-unknown}, at least: the registry is stopped (devopsy gc frees deleted tags)"
 fi
