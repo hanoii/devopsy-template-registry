@@ -1,0 +1,29 @@
+#!/bin/sh
+# The status capability (devopsy-cli's README, "Capabilities"): what
+# `devopsy --status` adds after the containers, with the project's
+# environment loaded. One fact per line. Never the passwords:
+# `devopsy credentials` prints those.
+set -eu
+
+auth="$DEVOPSY_PROJECT_DIR/mnt/auth/htpasswd"
+storage="$DEVOPSY_PROJECT_DIR/mnt/registry"
+user="${REGISTRY_USER:-devopsy}"
+pull_user="${REGISTRY_PULL_USER:-pull}"
+
+echo "url          ${SITE_URL:-no URL: no wildcard domain or DEVOPSY_DOMAINS}"
+echo "push user    $user"
+echo "pull user    $pull_user"
+# Users only: whether the passwords match takes deploy's htpasswd
+# container, and deploy rewrites the file when they differ.
+if [ ! -f "$auth" ]; then
+  echo "htpasswd     missing (devopsy deploy writes it)"
+elif grep -q "^$user:" "$auth" && grep -q "^$pull_user:" "$auth"; then
+  echo "htpasswd     both users"
+else
+  echo "htpasswd     other users than .env's (devopsy deploy rewrites it)"
+fi
+# What gc can shrink. The registry's UID owns it; du skips what it
+# cannot read.
+if [ -d "$storage" ]; then
+  echo "storage      $(du -sh "$storage" 2>/dev/null | cut -f 1) (devopsy gc frees deleted tags)"
+fi

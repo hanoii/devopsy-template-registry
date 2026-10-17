@@ -37,6 +37,7 @@ devopsy @prod --release          # runs deploy: https://registry-prod.<server's 
 devopsy @prod credentials      # URL, users and passwords for docker login
 devopsy @prod credentials pull # the read-only user only
 devopsy @prod rotate pull      # a new password for it
+devopsy @prod --status         # URL, users, htpasswd, storage used
 devopsy @prod logs -f registry
 ```
 
