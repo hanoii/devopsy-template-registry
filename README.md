@@ -87,10 +87,11 @@ docker login registry-prod.example.com -u pull
 - **Destroying.** `devopsy @prod --destroy` is devopsy's alone: it takes
   the containers and volumes down, empties `mnt/` as root, then removes
   the environment's directory. No destroy step.
-- **Uploads.** Traefik limits how long a request may take, body included, to
-  60 seconds by default, which can cut a large layer pushed over a slow link.
-  Raise it with `DEVOPSY_READ_TIMEOUT` in Traefik's `.devopsy/.env` (for
-  example `600s`, or `0` for no limit) and `devopsy restart` there.
+- **Uploads.** Traefik limits how long a request may take, body included,
+  to 60 seconds by default, which can cut a large layer pushed over a slow
+  link. Raise it in the server's Traefik settings (`600s`, or `0` for no
+  limit): `devopsy @<server>-traefik --vars set --show
+  DEVOPSY_READ_TIMEOUT`, then `devopsy @<server>-traefik deploy`.
 
 ## Cleaning up
 
@@ -115,8 +116,8 @@ crane ls registry:5000/myapp`. `delete` lists the tags first and asks
 to type `delete`, or `delete all` for a whole repository (`--yes` skips
 it, and is needed without a terminal). It removes only the tags: an
 image another tag points to stays (`images` shows which tags share a
-digest), and the repository stays listed, with no tags. Sizes count each tag's layers, shared or not, so they add up to
-more than `--status` shows. A server that ran a deleted tag keeps its
+digest), and the repository stays listed, with no tags. Sizes count each
+tag's layers, shared or not, so they add up to more than `--status` shows. A server that ran a deleted tag keeps its
 copy for rollbacks, but a new release of that tag fails.
 
 `gc` removes untagged manifests and the layers nothing else uses. An image
