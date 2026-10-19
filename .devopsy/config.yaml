@@ -1,4 +1,4 @@
-# devopsy config: see devopsy-cli's README, "Remote targets". Committed: no
+# devopsy config: see devopsy-cli's README, "Servers". Committed: no
 # secrets and no servers here. The server comes from the address
 # (devopsy @vm1:prod), or DEVOPSY_SERVER (or DEVOPSY_SERVER_<ENVIRONMENT>) in
 # .devopsy/.env or the environment, like DEVOPSY_SERVER=devopsy@203.0.113.10.
