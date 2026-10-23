@@ -16,8 +16,9 @@ services:
     image: registry:3
     restart: unless-stopped
     # Hardening checklist, for this service and the ones you add:
-    # - a fixed non-root UID, not the deploy user (1000): 10001, shared by
-    #   all projects, from its first process;
+    # - a fixed non-root UID, not the deploy user (1000, in the docker group:
+    #   an escape would land as root-equivalent): 10001, shared by all
+    #   projects, from its first process;
     # - a read-only root filesystem, with tmpfs or a mnt entry for what must
     #   be written;
     # - cap_drop ALL, adding back only a capability a stated reason needs
