@@ -82,8 +82,10 @@ docker login registry-prod.example.com -u pull
   repository and tag.
 - **Storage.** Images live in `shared/mnt/registry`: back it up, or accept
   rebuilding images. The registry runs as UID 10001 with a read-only root
-  filesystem; a one-shot `init` service gives it the storage directory,
-  which the deploy user cannot do.
+  filesystem and no capabilities, and devopsy gives it the storage
+  directory (the `devopsy.mnt.owner` label on the service), which the
+  deploy user cannot do. The tools (`htpasswd`, `crane`) run as 10001
+  without capabilities too.
 - **Destroying.** `devopsy @prod --destroy` is devopsy's alone: it takes
   the containers and volumes down, empties `mnt/` as root, then removes
   the environment's directory. No destroy step.
