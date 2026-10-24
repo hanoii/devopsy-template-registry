@@ -23,9 +23,9 @@ else
   echo "htpasswd     other users than .env's (devopsy deploy rewrites it)"
 fi
 # What gc can shrink. The registry's UID owns it, so du runs in a one-off
-# init (root, the same mount, no network), running or stopped. Only when
-# the directory exists: a bind mount would create it as root.
+# registry container (the same user and mount), running or stopped. Only
+# when the directory exists: a bind mount would create it as root.
 if [ -d "$storage" ]; then
-  size=$(devopsy run --rm --no-deps -T --entrypoint du init -sh /var/lib/registry </dev/null 2>/dev/null | cut -f 1)
+  size=$(devopsy run --rm --no-deps -T --entrypoint du registry -sh /var/lib/registry </dev/null 2>/dev/null | cut -f 1)
   echo "storage      ${size:-unknown} (devopsy gc frees deleted tags)"
 fi

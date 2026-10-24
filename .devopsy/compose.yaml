@@ -13,10 +13,21 @@ services:
   registry:
     image: registry:3.1.2
     restart: unless-stopped
-    # Not root, not the deploy user (1000): see "Conventions" in the devopsy
-    # workspace README. init gives it the storage directory.
+    # Hardening checklist, for this service and the ones you add:
+    # - a fixed non-root UID, not the deploy user (1000): 10001, shared by
+    #   all projects, from its first process;
+    # - a read-only root filesystem, with tmpfs or a mnt entry for what must
+    #   be written;
+    # - cap_drop ALL, adding back only a capability a stated reason needs
+    #   (none here: it listens on 5000);
+    # - no-new-privileges, so nothing gains privilege through setuid files;
+    # - in images you build, no setuid binaries and no file capabilities
+    #   the service does not need.
     user: "10001:10001"
     read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     environment:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: ${COMPOSE_PROJECT_NAME:-registry}
@@ -31,9 +42,6 @@ services:
     volumes:
       - ./mnt/registry:/var/lib/registry
       - ./mnt/auth:/auth:ro
-    depends_on:
-      init:
-        condition: service_completed_successfully
     healthcheck:
       # / answers 200 without credentials; /v2/ needs them.
       test: [CMD, wget, -q, -O, /dev/null, http://localhost:5000/]
@@ -41,6 +49,12 @@ services:
       start_period: 10s
       start_interval: 1s
     labels:
+      # devopsy creates the storage entry, and gives it and everything in it
+      # to this UID and GID before the run step: shared/mnt starts empty
+      # and belongs to the deploy user, which cannot chown. Keep it in step
+      # with user. ./mnt/auth is written from the host by deploy (the
+      # registry only reads it): no service owns it.
+      - devopsy.mnt.owner=10001:10001
       # Each release gets the server's wildcard domain from its proxy
       # (devopsy-template-traefik exports it), for <project>-<environment>.<domain>. Without a
       # proxy running the release fails: the project expects one.
@@ -76,21 +90,17 @@ services:
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
     networks: [default, traefik]
 
-  # shared/mnt belongs to the deploy user and Docker creates a missing
-  # bind-mount directory as root: hand the storage to the registry's UID.
-  init:
-    image: registry:3.1.2
-    user: root
-    entrypoint: [chown, "10001:10001", /var/lib/registry]
-    volumes:
-      - ./mnt/registry:/var/lib/registry
-    network_mode: none
-
   # `devopsy deploy` hashes the password with it (bcrypt, which the registry
-  # requires). Never started by `up`.
+  # requires). Never started by `up`. It writes nothing: it prints a hash
+  # and reads mnt/auth/htpasswd, which is world-readable for the registry.
   htpasswd:
     image: httpd:2.4.69-alpine
     profiles: [tools]
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     entrypoint: [htpasswd]
     network_mode: none
 
@@ -98,11 +108,19 @@ services:
   # the push user, inside the project's network: registry:5000, plain
   # HTTP, never through Traefik. The entrypoint logs in, then runs the
   # command it is given. The debug image has a shell. Never started by
-  # `up`. The login only writes crane's config, so its output goes.
+  # `up`. The login only writes crane's config, in a tmpfs home, so its
+  # output goes.
   crane:
     image: gcr.io/go-containerregistry/crane/debug:v0.22.1
     profiles: [tools]
+    user: "10001:10001"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     environment:
+      HOME: /tmp
       REGISTRY_USER: ${REGISTRY_USER:-devopsy}
       REGISTRY_PASSWORD: ${REGISTRY_PASSWORD:-}
     entrypoint:

@@ -49,7 +49,7 @@ hash() {
 running="$(devopsy ps -q registry 2>/dev/null)"
 changed=
 mkdir -p "$auth_dir"
-if [ "$(wc -l < "$auth_dir/htpasswd" 2>/dev/null || echo 0)" -ne 2 ] \
+if [ "$({ wc -l < "$auth_dir/htpasswd"; } 2>/dev/null || echo 0)" -ne 2 ] \
   || ! verify "$user" "$password" || ! verify "$pull_user" "$pull_password"; then
   { hash "$user" "$password"; hash "$pull_user" "$pull_password"; } > "$auth_dir/htpasswd.new"
   mv "$auth_dir/htpasswd.new" "$auth_dir/htpasswd"
