@@ -126,7 +126,8 @@ copy for rollbacks, but a new release of that tag fails.
 pushed only by digest, never tagged, counts as untagged. Older registry
 versions deleted the platform images of multi-platform tags this way; on
 3.1.2 a kept tag still pulls on every platform (checked with
-`crane export --platform`). Check again when upgrading the registry image.
+`crane export --platform`). The registry floats on `registry:3` (each
+release pulls its fixes): check again as the image moves.
 
 ## Locally
 

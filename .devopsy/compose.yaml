@@ -10,12 +10,15 @@
 # ./mnt/auth/htpasswd for both users, and REGISTRY_PUSH_USERS into .env for
 # Traefik (below).
 services:
+  # Floats on registry:3: every release pulls the image again, so fixes arrive
+  # with the next one. Never `latest`: a new major is an edit here.
   registry:
-    image: registry:3.1.2
+    image: registry:3
     restart: unless-stopped
     # Hardening checklist, for this service and the ones you add:
-    # - a fixed non-root UID, not the deploy user (1000): 10001, shared by
-    #   all projects, from its first process;
+    # - a fixed non-root UID, not the deploy user (1000, in the docker group:
+    #   an escape would land as root-equivalent): 10001, shared by all
+    #   projects, from its first process;
     # - a read-only root filesystem, with tmpfs or a mnt entry for what must
     #   be written;
     # - cap_drop ALL, adding back only a capability a stated reason needs
@@ -94,7 +97,7 @@ services:
   # requires). Never started by `up`. It writes nothing: it prints a hash
   # and reads mnt/auth/htpasswd, which is world-readable for the registry.
   htpasswd:
-    image: httpd:2.4.69-alpine
+    image: httpd:2.4-alpine
     profiles: [tools]
     user: "10001:10001"
     read_only: true
@@ -111,6 +114,7 @@ services:
   # `up`. The login only writes crane's config, in a tmpfs home, so its
   # output goes.
   crane:
+    # Exact: crane publishes no series tag.
     image: gcr.io/go-containerregistry/crane/debug:v0.22.1
     profiles: [tools]
     user: "10001:10001"
