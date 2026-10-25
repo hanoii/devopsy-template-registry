@@ -81,7 +81,9 @@ docker login registry-prod.example.com -u pull
   expands `$` in unquoted values). The `pull` user can still list every
   repository and tag.
 - **Storage.** Images live in `shared/mnt/registry`: back it up, or accept
-  rebuilding images. The registry runs as UID 10001 with a read-only root
+  rebuilding images. It is the service's data (`devopsy.data=true`):
+  `devopsy @prod --export registry > registry.tar` is a tar of it, the
+  registry stopped for the copy, and `--import registry` puts one back. The registry runs as UID 10001 with a read-only root
   filesystem and no capabilities, and devopsy gives it the storage
   directory (the `devopsy.mnt.owner` label on the service), which the
   deploy user cannot do. The tools (`htpasswd`, `crane`) run as 10001
