@@ -58,6 +58,13 @@ services:
       # with user. ./mnt/auth is written from the host by deploy (the
       # registry only reads it): no service owns it.
       - devopsy.mnt.owner=10001:10001
+      # The images are data: --export registry is a tar of them, taken
+      # with the registry stopped (own: a copy of a store mid-upload is no
+      # store), and its image only goes forward. Not auth: deploy writes
+      # it from shared/.env's passwords, each environment its own.
+      - devopsy.data=true
+      - devopsy.data.stop=own
+      - devopsy.data.exclude=auth
       # Each release gets the server's wildcard domain from its proxy
       # (devopsy-template-traefik exports it), for <project>-<environment>.<domain>. Without a
       # proxy running the release fails: the project expects one.
