@@ -23,17 +23,17 @@ environment:
 echo DEVOPSY_SERVER=devopsy@203.0.113.10 >> .devopsy/.env
 ```
 
-It gets `<project>-<environment>.<server's wildcard domain>` (its compose
+It gets `<project>-<environment>.<server's base domain>` (its compose
 project name, like `registry-prod`), whose domain each release imports
 from the server's proxy (devopsy-template-traefik), through the
 `devopsy.import` label in `compose.yaml`: a release fails while no proxy
 runs. The release says what it imported; `devopsy @prod --debug imports`
 shows it later, and whether the proxy has changed it since. Override it,
 or set it empty for none, per target: `devopsy @prod --vars set --show
-DEVOPSY_WILDCARD_DOMAIN`.
+PROXY_BASE_DOMAIN`.
 
 ```sh
-devopsy @prod --release          # runs deploy: https://registry-prod.<server's wildcard domain>
+devopsy @prod --release          # runs deploy: https://registry-prod.<server's base domain>
 devopsy @prod credentials      # URL, users and passwords for docker login
 devopsy @prod credentials pull # the read-only user only
 devopsy @prod rotate pull      # a new password for it

@@ -2,28 +2,33 @@
 # The env capability (devopsy-cli's README, "Capabilities"): devopsy runs it
 # before every command and sets what it prints, unless already set. This
 # site's hosts, from its compose project name (COMPOSE_PROJECT_NAME, always
-# set by devopsy), the wildcard domain imported from the server's proxy
+# set by devopsy), the base domain imported from the server's proxy
 # (compose.yaml's devopsy.import label) and the environment's
-# DEVOPSY_DOMAINS (space or comma separated):
+# PROXY_DOMAINS (space or comma separated):
 #   SITE_HOST_RULE  a Traefik rule for every host, for the router's labels
 #   SITE_HOST       the first: the custom domain, else the wildcard host
 #   SITE_URL        https://$SITE_HOST
-# Locally, without a wildcard domain, the wildcard host is
+# Locally, without a base domain, the wildcard host is
 # <name>.localhost; in a release without one (DEVOPSY_TARGET is set) there
-# is none, and a release without DEVOPSY_DOMAINS has no host at all.
+# is none, and a release without PROXY_DOMAINS has no host at all.
 set -euf
 name=${COMPOSE_PROJECT_NAME:?}
 wildcard=
-if [ -n "${DEVOPSY_WILDCARD_DOMAIN:-}" ]; then
-  wildcard=$name.$DEVOPSY_WILDCARD_DOMAIN
+if [ -n "${PROXY_BASE_DOMAIN:-}" ]; then
+  wildcard=$name.$PROXY_BASE_DOMAIN
 elif [ -z "${DEVOPSY_TARGET:-}" ]; then
   wildcard=$name.localhost
 fi
 hosts=
-for h in $(printf '%s %s' "${DEVOPSY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); do
+for h in $(printf '%s %s' "${PROXY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); do
   case $h in
-    *[!a-z0-9.*-]* | .* | *. | *..*)
-      echo "DEVOPSY_DOMAINS: $h is not a hostname" >&2
+    *\**)
+      # Traefik's Host() matches a name literally: it would never match.
+      echo "PROXY_DOMAINS: $h is a wildcard: name each host" >&2
+      exit 1
+      ;;
+    *[!a-z0-9.-]* | .* | *. | *..*)
+      echo "PROXY_DOMAINS: $h is not a hostname" >&2
       exit 1
       ;;
   esac
