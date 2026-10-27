@@ -13,6 +13,21 @@
 # is none, and a release without PROXY_DOMAINS has no host at all.
 set -euf
 name=${COMPOSE_PROJECT_NAME:?}
+# Names from before are refused, naming their new one: nothing reads them,
+# so a custom domain or a resolver would go without a word. A router naming
+# a resolver the server's Traefik lacks gets no certificate.
+renamed() {
+  echo "$1 is $2 now: rename it" >&2
+  exit 1
+}
+[ -z "${DEVOPSY_DOMAINS:-}" ] || renamed DEVOPSY_DOMAINS PROXY_DOMAINS
+[ -z "${CERTRESOLVER:-}" ] || renamed CERTRESOLVER PROXY_CERTRESOLVER
+[ -z "${DEVOPSY_WILDCARD_DOMAIN:-}" ] || renamed DEVOPSY_WILDCARD_DOMAIN PROXY_BASE_DOMAIN
+case ${PROXY_CERTRESOLVER:-} in
+  letsencrypt1) renamed "PROXY_CERTRESOLVER's letsencrypt1" le-http01 ;;
+  acmedns) renamed "PROXY_CERTRESOLVER's acmedns" le-dns01-selfhosted ;;
+  cloudflare) renamed "PROXY_CERTRESOLVER's cloudflare" le-dns01-cloudflare ;;
+esac
 wildcard=
 if [ -n "${PROXY_BASE_DOMAIN:-}" ]; then
   wildcard=$name.$PROXY_BASE_DOMAIN

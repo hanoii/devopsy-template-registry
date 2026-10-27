@@ -95,7 +95,7 @@ docker login registry-prod.example.com -u pull
   to 60 seconds by default, which can cut a large layer pushed over a slow
   link. Raise it in the server's Traefik settings (`600s`, or `0` for no
   limit): `devopsy @<server>-traefik --vars set --show
-  DEVOPSY_READ_TIMEOUT`, then `devopsy @<server>-traefik deploy`.
+  PROXY_READ_TIMEOUT`, then `devopsy @<server>-traefik deploy`.
 
 ## Cleaning up
 
