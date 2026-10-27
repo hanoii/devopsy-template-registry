@@ -36,6 +36,13 @@ case ${PROXY_CERTRESOLVER:-} in
     exit 1
     ;;
 esac
+# Checked alone: in the hosts below, a space or a comma would make it two.
+case ${PROXY_BASE_DOMAIN:-} in
+  *[!A-Za-z0-9.-]* | .* | *. | *..*)
+    echo "PROXY_BASE_DOMAIN is not a domain name: $PROXY_BASE_DOMAIN" >&2
+    exit 1
+    ;;
+esac
 wildcard=
 if [ -n "${PROXY_BASE_DOMAIN:-}" ]; then
   wildcard=$name.$PROXY_BASE_DOMAIN
@@ -53,7 +60,7 @@ for h in $(printf '%s %s' "${PROXY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); 
       ;;
     *[!a-z0-9.-]* | .* | *. | *..*)
       if [ "$h" = "$wildcard_host" ]; then
-        echo "the wildcard host, $h, is not a hostname (the environment's name or PROXY_BASE_DOMAIN)" >&2
+        echo "the wildcard host, $h, is not a hostname (from the environment's name)" >&2
       else
         echo "PROXY_DOMAINS: $h is not a hostname" >&2
       fi
