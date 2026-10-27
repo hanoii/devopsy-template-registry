@@ -13,20 +13,28 @@
 # is none, and a release without PROXY_DOMAINS has no host at all.
 set -euf
 name=${COMPOSE_PROJECT_NAME:?}
-# Names from before are refused, naming their new one: nothing reads them,
-# so a custom domain or a resolver would go without a word. A router naming
-# a resolver the server's Traefik lacks gets no certificate.
+# Names from before are refused when set at all (empty was the wildcard's
+# opt-out), naming their new one: nothing reads them, so a custom domain,
+# a resolver or the opt-out would go without a word. PROXY_CERTRESOLVER
+# names one of the Traefik template's resolvers, the old names refused
+# with their new one: a router naming a resolver the server's Traefik
+# lacks gets no certificate, which Traefik only logs.
 renamed() {
   echo "$1 is $2 now: rename it" >&2
   exit 1
 }
-[ -z "${DEVOPSY_DOMAINS:-}" ] || renamed DEVOPSY_DOMAINS PROXY_DOMAINS
-[ -z "${CERTRESOLVER:-}" ] || renamed CERTRESOLVER PROXY_CERTRESOLVER
-[ -z "${DEVOPSY_WILDCARD_DOMAIN:-}" ] || renamed DEVOPSY_WILDCARD_DOMAIN PROXY_BASE_DOMAIN
+[ -z "${DEVOPSY_DOMAINS+x}" ] || renamed DEVOPSY_DOMAINS PROXY_DOMAINS
+[ -z "${CERTRESOLVER+x}" ] || renamed CERTRESOLVER PROXY_CERTRESOLVER
+[ -z "${DEVOPSY_WILDCARD_DOMAIN+x}" ] || renamed DEVOPSY_WILDCARD_DOMAIN PROXY_BASE_DOMAIN
 case ${PROXY_CERTRESOLVER:-} in
   letsencrypt1) renamed "PROXY_CERTRESOLVER's letsencrypt1" le-http01 ;;
   acmedns) renamed "PROXY_CERTRESOLVER's acmedns" le-dns01-selfhosted ;;
   cloudflare) renamed "PROXY_CERTRESOLVER's cloudflare" le-dns01-cloudflare ;;
+  '' | le-http01 | le-dns01-selfhosted | le-dns01-cloudflare) ;;
+  *)
+    echo "PROXY_CERTRESOLVER must be le-http01, le-dns01-selfhosted or le-dns01-cloudflare: $PROXY_CERTRESOLVER" >&2
+    exit 1
+    ;;
 esac
 wildcard=
 if [ -n "${PROXY_BASE_DOMAIN:-}" ]; then
@@ -34,6 +42,7 @@ if [ -n "${PROXY_BASE_DOMAIN:-}" ]; then
 elif [ -z "${DEVOPSY_TARGET:-}" ]; then
   wildcard=$name.localhost
 fi
+wildcard_host=$(printf '%s' "$wildcard" | tr '[:upper:]' '[:lower:]')
 hosts=
 for h in $(printf '%s %s' "${PROXY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); do
   case $h in
@@ -43,7 +52,11 @@ for h in $(printf '%s %s' "${PROXY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); 
       exit 1
       ;;
     *[!a-z0-9.-]* | .* | *. | *..*)
-      echo "PROXY_DOMAINS: $h is not a hostname" >&2
+      if [ "$h" = "$wildcard_host" ]; then
+        echo "the wildcard host, $h, is not a hostname (the environment's name or PROXY_BASE_DOMAIN)" >&2
+      else
+        echo "PROXY_DOMAINS: $h is not a hostname" >&2
+      fi
       exit 1
       ;;
   esac
