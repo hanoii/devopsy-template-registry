@@ -65,10 +65,10 @@ services:
       - devopsy.data=true
       - devopsy.data.stop=own
       - devopsy.data.exclude=auth
-      # Each release gets the server's wildcard domain from its proxy
+      # Each release gets the server's base domain from its proxy
       # (devopsy-template-traefik exports it), for <project>-<environment>.<domain>. Without a
       # proxy running the release fails: the project expects one.
-      - devopsy.import.DEVOPSY_WILDCARD_DOMAIN=proxy/WILDCARD_DOMAIN
+      - devopsy.import.PROXY_BASE_DOMAIN=proxy/BASE_DOMAIN
       - traefik.enable=true
       # The registry's htpasswd has no scopes: every user in it pushes. The
       # pull user is read-only because Traefik splits requests by method:
@@ -78,8 +78,8 @@ services:
       # same header again. The pull router's rule is longer, so Traefik
       # gives it priority.
       #
-      # SITE_HOST_RULE: the target's DEVOPSY_DOMAINS plus
-      # <compose project>.<DEVOPSY_WILDCARD_DOMAIN>, computed by
+      # SITE_HOST_RULE: the target's PROXY_DOMAINS plus
+      # <compose project>.<PROXY_BASE_DOMAIN>, computed by
       # capabilities/env/compute. The fallback, for plain docker compose, is
       # a HostRegexp: Traefik requests no certificate for it, so a target
       # without hosts logs no ACME errors.
@@ -93,10 +93,13 @@ services:
       # quotes: compose expands $ in unquoted values. Not required here: a
       # release checks required variables before deploy writes it.
       - traefik.http.middlewares.${COMPOSE_PROJECT_NAME:-app}-push.basicauth.users=${REGISTRY_PUSH_USERS:-}
-      # letsencrypt1 (HTTP-01, the default), acmedns or cloudflare (DNS-01),
-      # per target, in config.yaml.
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.tls.certresolver=${CERTRESOLVER:-letsencrypt1}
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.tls.certresolver=${CERTRESOLVER:-letsencrypt1}
+      # The certificate resolver: the server's default (the proxy's own
+      # PROXY_CERTRESOLVER, le-http01 unless set), or the target's
+      # PROXY_CERTRESOLVER (le-http01, le-dns01-selfhosted or
+      # le-dns01-cloudflare). Unset, there is no label at all (compose
+      # leaves an empty one): an empty resolver gets no certificate.
+      - ${PROXY_CERTRESOLVER:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.tls.certresolver=$PROXY_CERTRESOLVER}
+      - ${PROXY_CERTRESOLVER:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.tls.certresolver=$PROXY_CERTRESOLVER}
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
     networks: [default, traefik]
 

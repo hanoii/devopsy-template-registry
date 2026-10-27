@@ -10,7 +10,7 @@ storage="$DEVOPSY_PROJECT_DIR/mnt/registry"
 user="${REGISTRY_USER:-devopsy}"
 pull_user="${REGISTRY_PULL_USER:-pull}"
 
-echo "url          ${SITE_URL:-no URL: no wildcard domain or DEVOPSY_DOMAINS}"
+echo "url          ${SITE_URL:-no URL: no base domain or PROXY_DOMAINS}"
 echo "push user    $user"
 echo "pull user    $pull_user"
 # Users only: whether the passwords match takes deploy's htpasswd

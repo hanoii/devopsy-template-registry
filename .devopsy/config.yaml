@@ -3,10 +3,10 @@
 # (devopsy @vm1:prod), or DEVOPSY_SERVER (or DEVOPSY_SERVER_<ENVIRONMENT>) in
 # .devopsy/.env or the environment, like DEVOPSY_SERVER=devopsy@203.0.113.10.
 # Each environment lives in <project>/<environment> under the server's
-# release root, and gets <project>-<environment>.<server's wildcard domain>,
+# release root, and gets <project>-<environment>.<server's base domain>,
 # imported from the server's proxy at each release (compose.yaml's
 # devopsy.import label); override it, or set it empty for none, with:
-#   devopsy @prod --vars set --show DEVOPSY_WILDCARD_DOMAIN
+#   devopsy @prod --vars set --show PROXY_BASE_DOMAIN
 project: registry
 secrets: [REGISTRY_PASSWORD, REGISTRY_PULL_PASSWORD, REGISTRY_HTTP_SECRET, REGISTRY_PUSH_USERS]
 defaults:
