@@ -13,5 +13,6 @@ defaults:
   mode: image
   release: {prepare: secrets, run: deploy}
   rollback: {prepare: secrets, run: deploy}
+  reload: deploy    # applies changed passwords: devopsy @prod --reload
 environments:
   prod: {}
