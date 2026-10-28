@@ -70,7 +70,8 @@ docker login registry-prod.example.com -u pull
   password into `shared/.env`, deploys, and prints the new login. The old
   password stops working at once: update it where that user logs in. To
   choose a password instead, `devopsy @prod --vars set
-  REGISTRY_PULL_PASSWORD`, then `devopsy @prod deploy`.
+  REGISTRY_PULL_PASSWORD`, then `devopsy @prod --reload` (`reload:
+  deploy`).
 - **The read-only user.** The registry's htpasswd has no permissions: every
   user in it can push. Traefik makes `pull` read-only: pulls are `GET` and
   `HEAD` requests (manifests, blobs, the catalog), and a second router sends
@@ -95,7 +96,7 @@ docker login registry-prod.example.com -u pull
   to 60 seconds by default, which can cut a large layer pushed over a slow
   link. Raise it in the server's Traefik settings (`600s`, or `0` for no
   limit): `devopsy @<server>-traefik --vars set --show
-  PROXY_READ_TIMEOUT`, then `devopsy @<server>-traefik deploy`.
+  PROXY_READ_TIMEOUT`, then `devopsy @<server>-traefik --reload`.
 
 ## Cleaning up
 
