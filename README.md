@@ -81,6 +81,13 @@ docker login registry-prod.example.com -u pull
   `REGISTRY_PUSH_USERS` for the router's label, in single quotes (compose
   expands `$` in unquoted values). The `pull` user can still list every
   repository and tag.
+- **Through a stop.** Both routers name `hold@file`, the server's
+  Traefik's hold (devopsy-template-traefik's README): a pull during a
+  release or a restart waits for the registry instead of getting a 502
+  or a 404, and is sent on to the same URL (a 307, which Docker
+  follows). An upload's body cannot be sent again: it fails as it would
+  have. It needs a Traefik that has it: release the server's Traefik
+  first. Drop it from the routers' `middlewares` labels to opt out.
 - **Storage.** Images live in `shared/mnt/registry`: back it up, or accept
   rebuilding images. It is the service's data (`devopsy.data=true`):
   `devopsy @prod --export registry > registry.tar` is a tar of it, the

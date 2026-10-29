@@ -85,9 +85,14 @@ services:
       # without hosts logs no ACME errors.
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.rule=(${SITE_HOST_RULE:-HostRegexp(`^app\.localhost$`)}) && (Method(`GET`) || Method(`HEAD`))
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.service=${COMPOSE_PROJECT_NAME:-app}
+      # hold@file, on both routers: the server's Traefik
+      # (devopsy-template-traefik) holds a request through a stop of the
+      # registry instead of its 502 or 404, and sends it on once it
+      # answers. Drop it to opt out.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.middlewares=hold@file
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.rule=${SITE_HOST_RULE:-HostRegexp(`^app\.localhost$`)}
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.service=${COMPOSE_PROJECT_NAME:-app}
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.middlewares=${COMPOSE_PROJECT_NAME:-app}-push
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.middlewares=hold@file,${COMPOSE_PROJECT_NAME:-app}-push
       # REGISTRY_PUSH_USERS: the push user's line of mnt/auth/htpasswd
       # (user:bcrypt), written to .env by deploy before `up`, in single
       # quotes: compose expands $ in unquoted values. Not required here: a
