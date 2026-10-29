@@ -97,6 +97,13 @@ docker login registry-prod.example.com -u pull
   link. Raise it in the server's Traefik settings (`600s`, or `0` for no
   limit): `devopsy @<server>-traefik --vars set --show
   PROXY_READ_TIMEOUT`, then `devopsy @<server>-traefik --reload`.
+- **Behind Cloudflare.** Its Free and Pro plans take a request body of 100
+  MB at most, through its proxy or a tunnel: a larger layer fails to push
+  (413). Keep the registry on a direct host (DNS only), or its layers
+  small. On a server with tunneled sites and direct ones, the registry
+  names its entrypoint like any site, `PROXY_ENTRYPOINTS: tunnel` in its
+  target's `env` with `PROXY_CERTRESOLVER` unset (devopsy-template-traefik's
+  "Behind a Cloudflare Tunnel").
 
 ## Cleaning up
 
