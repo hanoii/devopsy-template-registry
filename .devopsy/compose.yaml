@@ -100,6 +100,12 @@ services:
       # leaves an empty one): an empty resolver gets no certificate.
       - ${PROXY_CERTRESOLVER:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.tls.certresolver=$PROXY_CERTRESOLVER}
       - ${PROXY_CERTRESOLVER:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.tls.certresolver=$PROXY_CERTRESOLVER}
+      # The entrypoints, only when the target names them: tunnel for a site
+      # behind a Cloudflare Tunnel on a server with direct sites too (then
+      # with PROXY_CERTRESOLVER unset: a router with a resolver never matches
+      # the tunnel's plain HTTP). Unset, no label: the server's default ones.
+      - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.entrypoints=$PROXY_ENTRYPOINTS}
+      - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.entrypoints=$PROXY_ENTRYPOINTS}
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
     networks: [default, traefik]
 
