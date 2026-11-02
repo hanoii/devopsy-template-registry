@@ -10,10 +10,12 @@
 # ./mnt/auth/htpasswd for both users, and REGISTRY_PUSH_USERS into .env for
 # Traefik (below).
 services:
-  # Floats on registry:3: every release pulls the image again, so fixes arrive
-  # with the next one. Never `latest`: a new major is an edit here.
+  # Floats on registry:3 (REGISTRY_VERSION): every release pulls the image
+  # again, so fixes arrive with the next one. The same variable is the
+  # data's version (devopsy.data.version, below). Never `latest`: a new
+  # major is a higher REGISTRY_VERSION, which a release takes.
   registry:
-    image: registry:3
+    image: registry:${REGISTRY_VERSION:-3}
     restart: unless-stopped
     # Hardening checklist, for this service and the ones you add:
     # - a fixed non-root UID, not the deploy user (1000, in the docker group:
@@ -60,9 +62,12 @@ services:
       - devopsy.mnt.owner=user
       # The images are data: --export registry is a tar of them, taken
       # with the registry stopped (own: a copy of a store mid-upload is no
-      # store), and its image only goes forward. Not auth: deploy writes
-      # it from shared/.env's passwords, each environment its own.
+      # store). Not auth: deploy writes it from shared/.env's passwords,
+      # each environment its own. Its version is the image's major, from
+      # the same variable: devopsy never runs the store on a lower one (a
+      # rollback across a major is refused), nor on another tag at it.
       - devopsy.data=true
+      - devopsy.data.version=${REGISTRY_VERSION:-3}
       - devopsy.data.stop=own
       - devopsy.data.exclude=auth
       # Each release gets the server's base domain from its proxy
