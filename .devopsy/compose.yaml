@@ -53,11 +53,11 @@ services:
       start_interval: 1s
     labels:
       # devopsy creates the storage entry, and gives it and everything in it
-      # to this UID and GID before the run step: shared/mnt starts empty
-      # and belongs to the deploy user, which cannot chown. Keep it in step
-      # with user. ./mnt/auth is written from the host by deploy (the
-      # registry only reads it): no service owns it.
-      - devopsy.mnt.owner=10001:10001
+      # to user: above before the run step: shared/mnt starts empty and
+      # belongs to the deploy user, which cannot chown. ./mnt/auth is
+      # written from the host by deploy (the registry only reads it): no
+      # service owns it.
+      - devopsy.mnt.owner=user
       # The images are data: --export registry is a tar of them, taken
       # with the registry stopped (own: a copy of a store mid-upload is no
       # store), and its image only goes forward. Not auth: deploy writes
