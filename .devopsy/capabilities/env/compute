@@ -1,5 +1,5 @@
 #!/bin/sh
-# The env capability (devopsy-cli's README, "Capabilities"): devopsy runs it
+# The env capability (devopsy-cli's docs/capabilities.md): devopsy runs it
 # before every command and sets what it prints, unless already set. This
 # site's hosts, from its compose project name (COMPOSE_PROJECT_NAME, always
 # set by devopsy), the base domain imported from the server's proxy

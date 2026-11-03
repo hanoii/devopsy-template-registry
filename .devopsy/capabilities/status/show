@@ -1,5 +1,5 @@
 #!/bin/sh
-# The status capability (devopsy-cli's README, "Capabilities"): what
+# The status capability (devopsy-cli's docs/capabilities.md): what
 # `devopsy --status` adds after the containers, with the project's
 # environment loaded. One fact per line. Never the passwords:
 # `devopsy credentials` prints those.
