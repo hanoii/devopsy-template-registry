@@ -89,7 +89,10 @@ docker login registry-prod.example.com -u pull
   have. It needs a Traefik that has it: release the server's Traefik
   first. Drop it from the routers' `middlewares` labels to opt out.
 - **Storage.** Images live in `shared/mnt/registry`: back it up, or accept
-  rebuilding images. It is the service's data (`devopsy.data=true`):
+  rebuilding images. It is the service's data (`devopsy.data=true`,
+  `devopsy.data.version` the image's major, `REGISTRY_VERSION`, 3 by
+  default, which its tag reads too: devopsy never runs the store on a
+  lower one, so a rollback across a major is refused):
   `devopsy @prod --export registry > registry.tar` is a tar of it, the
   registry stopped for the copy, and `--import registry` puts one back. The registry runs as UID 10001 with a read-only root
   filesystem and no capabilities, and devopsy gives it the storage
@@ -143,8 +146,9 @@ copy for rollbacks, but a new release of that tag fails.
 pushed only by digest, never tagged, counts as untagged. Older registry
 versions deleted the platform images of multi-platform tags this way; on
 3.1.2 a kept tag still pulls on every platform (checked with
-`crane export --platform`). The registry floats on `registry:3` (each
-release pulls its fixes): check again as the image moves.
+`crane export --platform`). The registry floats on
+`registry:${REGISTRY_VERSION:-3}` (each release pulls its fixes): check
+again as the image moves.
 
 ## Locally
 
