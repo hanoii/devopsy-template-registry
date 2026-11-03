@@ -98,8 +98,8 @@ sites](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/hold.md
 A pull during a release or a restart waits for the registry instead of
 getting a 502 or a 404, and is sent on to the same URL with a 307, which
 Docker follows. A browser sends a POST's body again after that 307, but
-Docker cannot send an upload's streamed body again, and an upload fails
-as it would without the hold. Release the server's Traefik first, since
+Docker cannot send an upload's body again, so an upload fails as it
+would without the hold. Release the server's Traefik first, since
 an older one has no hold. To opt out, drop `hold@file` from the routers'
 `middlewares` labels.
 
