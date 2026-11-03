@@ -6,7 +6,7 @@ distribution](https://distribution.github.io/distribution/)) on a
 [devopsy-template-traefik](https://github.com/hanoii/devopsy-template-traefik).
 It has two users: one that pushes, for CI or a build server, and a
 read-only one, for the servers that pull the images. Use it for devopsy's
-image mode, where images are built and pushed once and each environment
+image mode, where images are built and pushed and each environment
 pulls its commit's image.
 
 ## Using this template
