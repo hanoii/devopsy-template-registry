@@ -119,7 +119,7 @@ services:
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
       # The network Traefik reaches this on, which it joins by itself.
       - traefik.docker.network=${COMPOSE_PROJECT_NAME:-registry}_proxy
-    networks: [default, proxy]
+    networks: [private, proxy]
 
   # `devopsy deploy` hashes the password with it (bcrypt, which the registry
   # requires). Never started by `up`. It writes nothing: it prints a hash
@@ -161,11 +161,11 @@ services:
       - -c
       - printf '%s' "$$REGISTRY_PASSWORD" | crane auth login registry:5000 -u "$$REGISTRY_USER" --password-stdin >/dev/null 2>&1 && exec "$$@"
       - crane
-    networks: [default, proxy]
+    networks: [private, proxy]
 
 networks:
   # What is only here has no way out.
-  default:
+  private:
     internal: true
   proxy:
     name: ${COMPOSE_PROJECT_NAME:-registry}_proxy
