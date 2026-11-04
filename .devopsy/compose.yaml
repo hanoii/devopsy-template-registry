@@ -117,7 +117,9 @@ services:
       - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.entrypoints=$PROXY_ENTRYPOINTS}
       - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.entrypoints=$PROXY_ENTRYPOINTS}
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
-    networks: [default, traefik]
+      # The network Traefik reaches this on, which it joins by itself.
+      - traefik.docker.network=${COMPOSE_PROJECT_NAME:-registry}_proxy
+    networks: [default, proxy]
 
   # `devopsy deploy` hashes the password with it (bcrypt, which the registry
   # requires). Never started by `up`. It writes nothing: it prints a hash
@@ -160,6 +162,8 @@ services:
       - crane
 
 networks:
-  traefik:
-    name: traefik
-    external: true
+  # What is only here, like crane, has no way out.
+  default:
+    internal: true
+  proxy:
+    name: ${COMPOSE_PROJECT_NAME:-registry}_proxy
