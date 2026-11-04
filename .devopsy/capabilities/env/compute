@@ -8,6 +8,7 @@
 #   SITE_HOST_RULE  a Traefik rule for every host, for the router's labels
 #   SITE_HOST       the first: the custom domain, else the wildcard host
 #   SITE_URL        https://$SITE_HOST
+#   SITE_URLS       https://<host> for every host, space separated
 # Locally, without a base domain, the wildcard host is
 # <name>.localhost; in a release without one (DEVOPSY_TARGET is set) there
 # is none, and a release without PROXY_DOMAINS has no host at all.
@@ -39,9 +40,12 @@ for h in $(printf '%s %s' "${PROXY_DOMAINS:-}" "$wildcard" | tr ',A-Z' ' a-z'); 
 done
 [ -n "$hosts" ] || exit 0
 rule=
+urls=
 for h in $hosts; do
   rule="${rule:+$rule || }Host(\`$h\`)"
+  urls="${urls:+$urls }https://$h"
 done
 echo "SITE_HOST_RULE='$rule'"
 echo "SITE_HOST='${hosts%% *}'"
 echo "SITE_URL='https://${hosts%% *}'"
+echo "SITE_URLS='$urls'"
