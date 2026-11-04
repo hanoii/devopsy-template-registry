@@ -100,8 +100,8 @@ getting a 502 or a 404, and is sent on to the same URL with a 307, which
 Docker follows. A browser sends a POST's body again after that 307, but
 Docker cannot send an upload's body again, so an upload fails as it
 would without the hold. Release the server's Traefik first, since
-an older one has no hold and does not join this project's network. To opt out, drop `hold@file` from the routers'
-`middlewares` labels.
+an older one has no hold and does not join this project's network. To
+opt out, drop `hold@file` from the routers' `middlewares` labels.
 
 ## Storage
 
