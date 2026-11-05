@@ -117,7 +117,9 @@ services:
       - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.entrypoints=$PROXY_ENTRYPOINTS}
       - ${PROXY_ENTRYPOINTS:+traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}.entrypoints=$PROXY_ENTRYPOINTS}
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-app}.loadbalancer.server.port=5000
-    networks: [default, traefik]
+      # The network Traefik reaches this on, which it joins by itself.
+      - traefik.docker.network=${COMPOSE_PROJECT_NAME:-registry}_proxy
+    networks: [private, proxy]
 
   # `devopsy deploy` hashes the password with it (bcrypt, which the registry
   # requires). Never started by `up`. It writes nothing: it prints a hash
@@ -135,7 +137,8 @@ services:
 
   # `devopsy crane`, `images` and `delete` reach the registry with it, as
   # the push user, inside the project's network: registry:5000, plain
-  # HTTP, never through Traefik. The entrypoint logs in, then runs the
+  # HTTP, never through Traefik. On proxy alone, its way out, since `devopsy
+  # crane` also copies from other registries. The entrypoint logs in, then runs the
   # command it is given. The debug image has a shell. Never started by
   # `up`. The login only writes crane's config, in a tmpfs home, so its
   # output goes.
@@ -158,8 +161,11 @@ services:
       - -c
       - printf '%s' "$$REGISTRY_PASSWORD" | crane auth login registry:5000 -u "$$REGISTRY_USER" --password-stdin >/dev/null 2>&1 && exec "$$@"
       - crane
+    networks: [proxy]
 
 networks:
-  traefik:
-    name: traefik
-    external: true
+  # What is only here has no way out.
+  private:
+    internal: true
+  proxy:
+    name: ${COMPOSE_PROJECT_NAME:-registry}_proxy
