@@ -1,8 +1,10 @@
 #!/bin/sh
 # The status capability (devopsy-cli's docs/capabilities.md): what
 # `devopsy --status` adds after the containers, with the project's
-# environment loaded. One fact per line. Never the passwords:
-# `devopsy credentials` prints those.
+# environment loaded. One fact per line, `<level>\t<key>\t<value>`, its
+# level info or warning (which makes --status exit 3), then a command to
+# copy when there is one; devopsy aligns and colors them. Never the
+# passwords: `devopsy credentials` prints those.
 set -eu
 
 auth="$DEVOPSY_PROJECT_DIR/mnt/auth/htpasswd"
@@ -10,28 +12,36 @@ storage="$DEVOPSY_PROJECT_DIR/mnt/registry"
 user="${REGISTRY_USER:-devopsy}"
 pull_user="${REGISTRY_PULL_USER:-pull}"
 
+# fact <level> <key> <value> [<fix>]
+fact() {
+  printf '%s\t%s\t%s' "$1" "$2" "$3"
+  [ $# -lt 4 ] || printf '\t%s' "$4"
+  echo
+}
+
 if [ -n "${SITE_URLS:-}" ]; then
   for url in $SITE_URLS; do
-    echo "url          $url"
+    fact info url "$url"
   done
 else
-  echo "url          no URL: no base domain or PROXY_DOMAINS"
+  fact warning url "no URL: no base domain or PROXY_DOMAINS"
 fi
-echo "push user    $user"
-echo "pull user    $pull_user"
+fact info "push user" "$user"
+fact info "pull user" "$pull_user"
 # Users only: whether the passwords match takes deploy's htpasswd
 # container, and deploy rewrites the file when they differ.
 if [ ! -f "$auth" ]; then
-  echo "htpasswd     missing (devopsy deploy writes it)"
+  fact warning htpasswd "missing, so nobody can log in" "devopsy deploy"
 elif grep -q "^$user:" "$auth" && grep -q "^$pull_user:" "$auth"; then
-  echo "htpasswd     both users"
+  fact info htpasswd "both users"
 else
-  echo "htpasswd     other users than .env's (devopsy deploy rewrites it)"
+  fact warning htpasswd "other users than .env's" "devopsy deploy"
 fi
-# What gc can shrink. The registry's UID owns it, so du runs in a one-off
-# registry container (the same user and mount), running or stopped. Only
-# when the directory exists: a bind mount would create it as root.
+# What gc can shrink (it frees deleted tags). The registry's UID owns it,
+# so du runs in a one-off registry container (the same user and mount),
+# running or stopped. Only when the directory exists: a bind mount would
+# create it as root.
 if [ -d "$storage" ]; then
   size=$(devopsy run --rm --no-deps -T --entrypoint du registry -sh /var/lib/registry </dev/null 2>/dev/null | cut -f 1)
-  echo "storage      ${size:-unknown} (devopsy gc frees deleted tags)"
+  fact info storage "${size:-unknown}" "devopsy gc"
 fi
