@@ -2,9 +2,9 @@
 # The status capability (devopsy-cli's docs/capabilities.md): what
 # `devopsy --status` adds after the containers, with the project's
 # environment loaded. One fact per line, `<level>\t<key>\t<value>`, its
-# level info or warning (which makes --status exit 3), then a command to
-# copy when there is one; devopsy aligns and colors them. Never the
-# passwords: `devopsy credentials` prints those.
+# level info, highlight (shown in bold) or warning (which makes --status
+# exit 3), then a command to copy when there is one; devopsy aligns and
+# colors them. Never the passwords: `devopsy credentials` prints those.
 set -eu
 
 auth="$DEVOPSY_PROJECT_DIR/mnt/auth/htpasswd"
@@ -21,7 +21,7 @@ fact() {
 
 if [ -n "${SITE_URLS:-}" ]; then
   for url in $SITE_URLS; do
-    fact info url "$url"
+    fact highlight url "$url"
   done
 else
   fact warning url "no URL: no base domain or PROXY_DOMAINS"
