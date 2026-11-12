@@ -18,9 +18,10 @@ services:
     image: registry:${REGISTRY_VERSION:-3}
     restart: unless-stopped
     # Hardening checklist, for this service and the ones you add:
-    # - a fixed non-root UID, not the deploy user (1000, in the docker group:
-    #   an escape would land as root-equivalent): 10001, shared by all
-    #   projects, from its first process;
+    # - its environment's own uid, DEVOPSY_UID, from its first process, which
+    #   devopsy gives every environment on a server and no other environment's
+    #   containers share, so an escape reaches nothing of theirs through
+    #   /proc; never the deploy user's (in the docker group) nor root;
     # - a read-only root filesystem, with tmpfs or a mnt entry for what must
     #   be written;
     # - cap_drop ALL, adding back only a capability a stated reason needs
@@ -28,7 +29,7 @@ services:
     # - no-new-privileges, so nothing gains privilege through setuid files;
     # - in images you build, no setuid binaries and no file capabilities
     #   the service does not need.
-    user: "10001:10001"
+    user: "${DEVOPSY_UID:?}:${DEVOPSY_UID:?}"
     read_only: true
     cap_drop: [ALL]
     security_opt:
@@ -85,7 +86,7 @@ services:
       #
       # SITE_HOST_RULE: the target's PROXY_DOMAINS plus
       # <compose project>.<PROXY_BASE_DOMAIN>, computed by
-      # capabilities/env/compute. The fallback, for plain docker compose, is
+      # capabilities/env/compute. The fallback, for a run that leaves it unset, is
       # a HostRegexp: Traefik requests no certificate for it, so a target
       # without hosts logs no ACME errors.
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-app}-pull.rule=(${SITE_HOST_RULE:-HostRegexp(`^app\.localhost$`)}) && (Method(`GET`) || Method(`HEAD`))
@@ -127,7 +128,7 @@ services:
   htpasswd:
     image: httpd:2.4-alpine
     profiles: [tools]
-    user: "10001:10001"
+    user: "${DEVOPSY_UID:?}:${DEVOPSY_UID:?}"
     read_only: true
     cap_drop: [ALL]
     security_opt:
@@ -146,7 +147,7 @@ services:
     # Exact: crane publishes no series tag.
     image: gcr.io/go-containerregistry/crane/debug:v0.22.1
     profiles: [tools]
-    user: "10001:10001"
+    user: "${DEVOPSY_UID:?}:${DEVOPSY_UID:?}"
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]

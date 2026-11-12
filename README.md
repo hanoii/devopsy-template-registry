@@ -114,10 +114,12 @@ refused. `devopsy @prod --export registry > registry.tar` is a tar of
 it, taken with the registry stopped, and `--import registry` puts one
 back.
 
-The registry runs as UID 10001 with a read-only root filesystem and no
-capabilities. devopsy gives it the storage directory (the service's
+The registry runs as its environment's own uid (`DEVOPSY_UID`, which
+devopsy gives each environment on a server and no other environment's
+containers share) with a read-only root filesystem and no capabilities.
+devopsy gives it the storage directory (the service's
 `devopsy.mnt.owner=user` label, from its `user:`), which the deploy user
-cannot do. The tools (`htpasswd`, `crane`) also run as 10001 without
+cannot do. The tools (`htpasswd`, `crane`) run as that uid too, without
 capabilities.
 
 ## Uploads
