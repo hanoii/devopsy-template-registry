@@ -1,8 +1,8 @@
 #!/bin/sh
 ## Description: Start or update the registry (run on the server by release)
 # The environments' release and rollback run step (config.yaml), run on the
-# server by `devopsy @<target> --release` and `--rollback`, and locally by
-# `devopsy --release`.
+# server by `devopsy @<target> --release` and `--rollback`, and without a
+# target by `devopsy --release`.
 #
 # The release's prepare step generated missing secrets (secrets). Every
 # run checks mnt/auth/htpasswd against the two users, REGISTRY_USER

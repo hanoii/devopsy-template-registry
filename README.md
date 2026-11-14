@@ -186,7 +186,7 @@ way; on 3.1.2 a kept tag still pulls on every platform (checked with
 `registry:${REGISTRY_VERSION:-3}`, and each release pulls its fixes, so
 check again after an update.
 
-## Locally
+## Without a target
 
 With a local devopsy-template-traefik, the registry is at
 `https://registry.localhost` (the config's project name):
