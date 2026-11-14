@@ -9,9 +9,9 @@
 #   SITE_HOST       the first: the custom domain, else the wildcard host
 #   SITE_URL        https://$SITE_HOST
 #   SITE_URLS       https://<host> for every host, space separated
-# Without a target or a base domain, the wildcard host is
-# <name>.localhost; in a release without one (DEVOPSY_TARGET is set) there
-# is none, and a release without PROXY_DOMAINS has no host at all.
+# Without a target and without a base domain, the wildcard host is
+# <name>.localhost; in a release without a base domain (DEVOPSY_TARGET is
+# set) there is none, and a release without PROXY_DOMAINS has no host at all.
 set -euf
 name=${COMPOSE_PROJECT_NAME:?}
 wildcard=
