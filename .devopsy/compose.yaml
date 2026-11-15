@@ -49,8 +49,10 @@ services:
       - ./mnt/registry:/var/lib/registry
       - ./mnt/auth:/auth:ro
     healthcheck:
-      # / answers 200 without credentials; /v2/ needs them.
-      test: [CMD, wget, -q, -O, /dev/null, http://localhost:5000/]
+      # / answers 200 without credentials; /v2/ needs them. -Y off: behind
+      # an HTTP proxy Docker hands the container its settings, and busybox's
+      # wget ignores no_proxy, so it would ask the proxy even for localhost.
+      test: [CMD, wget, -Y, 'off', -q, -O, /dev/null, http://localhost:5000/]
       interval: 10s
       start_period: 10s
       start_interval: 1s
@@ -142,7 +144,10 @@ services:
   # crane` also copies from other registries. The entrypoint logs in, then runs the
   # command it is given. The debug image has a shell. Never started by
   # `up`. The login only writes crane's config, in a tmpfs home, so its
-  # output goes.
+  # output goes. Behind an HTTP proxy Docker hands it the server's
+  # settings, which crane follows: registry is appended to their NO_PROXY
+  # and no_proxy (Go will read the lowercase one first), and other
+  # registries stay behind the proxy.
   crane:
     # Exact: crane publishes no series tag.
     image: gcr.io/go-containerregistry/crane/debug:v0.22.1
@@ -160,7 +165,7 @@ services:
     entrypoint:
       - sh
       - -c
-      - printf '%s' "$$REGISTRY_PASSWORD" | crane auth login registry:5000 -u "$$REGISTRY_USER" --password-stdin >/dev/null 2>&1 && exec "$$@"
+      - l=$${NO_PROXY:-$${no_proxy:-}}; l=$${l:+$$l,}registry; export NO_PROXY="$$l" no_proxy="$$l"; printf '%s' "$$REGISTRY_PASSWORD" | crane auth login registry:5000 -u "$$REGISTRY_USER" --password-stdin >/dev/null 2>&1 && exec "$$@"
       - crane
     networks: [proxy]
 
