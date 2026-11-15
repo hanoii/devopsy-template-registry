@@ -140,6 +140,15 @@ entrypoint like any site, `PROXY_ENTRYPOINTS: tunnel` in its target's
 [Tunneled and direct sites on one
 server](https://github.com/hanoii/devopsy-template-traefik/blob/main/docs/tunnel.md#tunneled-and-direct-sites-on-one-server)).
 
+## Behind an HTTP proxy
+
+On a server behind an HTTP proxy, Docker gives every container the proxy
+settings of the deploy user's `~/.docker/config.json`
+([devopsy-cli's servers doc](https://github.com/hanoii/devopsy-cli/blob/main/docs/servers.md#behind-an-http-proxy)).
+The registry needs nothing listed there: its healthcheck never uses the
+proxy, and `crane` reaches the registry directly while other registries
+stay behind the proxy.
+
 ## Destroying
 
 `devopsy @prod --destroy` is built into devopsy; the project has no
