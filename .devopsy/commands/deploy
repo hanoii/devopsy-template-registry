@@ -34,15 +34,33 @@ fi
 # htpasswd and crane are in the tools profile, which it leaves alone.
 devopsy pull --quiet htpasswd crane
 
-# Passwords go through stdin, never the command line.
-# verify USER PASSWORD: true when mnt/auth/htpasswd has that user and password.
+# Passwords go through stdin, never the command line. The htpasswd
+# service's stderr (compose's lines, a refusal) goes to $log, shown only
+# when it fails: a run that fails stops deploy before htpasswd is written.
+log="$(mktemp)"
+trap 'rm -f "$log"' EXIT
+fail() {
+  sed '/^$/d' "$log" >&2
+  echo "deploy: $1" >&2
+  exit 1
+}
+# verify USER PASSWORD: true when mnt/auth/htpasswd has that user and
+# password, false when the password differs (3) or the user is not there (6).
 verify() {
-  printf '%s\n' "$2" | devopsy run --rm -T -v "$auth_dir:/auth:ro" htpasswd -v -i /auth/htpasswd "$1" >/dev/null 2>&1
+  status=0
+  printf '%s\n' "$2" | devopsy run --rm -T htpasswd -v -i /auth/htpasswd "$1" >/dev/null 2>"$log" || status=$?
+  case $status in
+    0) return 0 ;;
+    3 | 6) return 1 ;;
+    *) fail "could not check $1 in mnt/auth/htpasswd" ;;
+  esac
 }
 # hash USER PASSWORD: the user's htpasswd line (bcrypt, which the registry
 # requires; htpasswd -n adds an empty line).
 hash() {
-  printf '%s\n' "$2" | devopsy run --rm -T htpasswd -n -i -B "$1" 2>/dev/null | sed '/^$/d'
+  line="$(printf '%s\n' "$2" | devopsy run --rm -T htpasswd -n -i -B "$1" 2>"$log")" \
+    || fail "could not hash the password of $1"
+  printf '%s\n' "$line" | sed '/^$/d'
 }
 
 # A running registry restarts to read a new file.
