@@ -85,4 +85,4 @@ for ref in "$@"; do
   echo "delete: $ref" >&2
 done
 ' delete "$@"
-echo "delete: devopsy gc frees the space" >&2
+echo "delete: the gc command frees the space" >&2
