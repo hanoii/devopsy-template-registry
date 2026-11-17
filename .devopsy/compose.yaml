@@ -124,9 +124,10 @@ services:
       - traefik.docker.network=${COMPOSE_PROJECT_NAME:-registry}_proxy
     networks: [private, proxy]
 
-  # `devopsy deploy` hashes the password with it (bcrypt, which the registry
-  # requires). Never started by `up`. It writes nothing: it prints a hash
-  # and reads mnt/auth/htpasswd, which is world-readable for the registry.
+  # `devopsy deploy` hashes the passwords with it (bcrypt, which the
+  # registry requires) and checks mnt/auth/htpasswd against them. Never
+  # started by `up`. It writes nothing: it prints a hash and reads the file,
+  # which is world-readable for the registry.
   htpasswd:
     image: httpd:2.4-alpine
     profiles: [tools]
@@ -137,6 +138,8 @@ services:
       - no-new-privileges:true
     entrypoint: [htpasswd]
     network_mode: none
+    volumes:
+      - ./mnt/auth:/auth:ro
 
   # `devopsy crane`, `images` and `delete` reach the registry with it, as
   # the push user, inside the project's network: registry:5000, plain
