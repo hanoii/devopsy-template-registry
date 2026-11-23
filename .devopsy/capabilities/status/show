@@ -39,10 +39,9 @@ else
 fi
 # What gc can shrink (it frees deleted tags). The registry's UID owns it,
 # so du runs in a one-off registry container (the same user and mount),
-# running or stopped, with no --entrypoint, which a project user's door
-# refuses: the image's entrypoint runs a command other than the registry's
-# as it is. Only when the directory exists: a bind mount would create it
-# as root.
+# running or stopped, by the image's own entrypoint, which runs a command
+# other than the registry's as it is. Only when the directory exists: a
+# bind mount would create it as root.
 if [ -d "$storage" ]; then
   size=$(devopsy run --rm --no-deps -T registry du -sh /var/lib/registry </dev/null 2>/dev/null | cut -f 1)
   fact info storage "${size:-unknown}" "devopsy gc"
